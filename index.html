@@ -28,25 +28,56 @@
             z-index: 10;
         }
 
-        .slide-container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            position: relative;
-            width: 100%;
-            /* 4:3 比例 */
-            aspect-ratio: 4/3;
-            max-width: 1024px;
-            margin: 0 auto;
-        }
+        /* 修改 .slide-container 的CSS */
+.slide-container {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    max-width: 1024px;
+    margin: 0 auto;
+    
+    /* 手機版：自動高度，按內容調整 */
+    min-height: 400px; /* 設定最小高度避免太矮 */
+    
+    /* 桌面版：維持4:3比例 */
+    aspect-ratio: unset; /* 先移除原有的4:3比例 */
+}
 
-        .slide {
-            display: none;
-            padding: 2rem;
-            height: 100%;
-            overflow-y: auto;
-        }
+/* 桌面版（768px以上）使用4:3比例 */
+@media (min-width: 768px) {
+    .slide-container {
+        aspect-ratio: 4/3;
+        min-height: unset; /* 移除最小高度限制 */
+    }
+}
+
+/* 同時需要調整 .slide 的高度設定 */
+.slide {
+    display: none;
+    padding: 2rem;
+    /* 移除固定高度，讓內容決定高度 */
+    min-height: 400px; /* 手機版最小高度 */
+    overflow-y: auto;
+}
+
+/* 桌面版的slide維持100%高度 */
+@media (min-width: 768px) {
+    .slide {
+        height: 100%;
+        min-height: unset;
+    }
+}
+
+/* 手機版減少padding以節省空間 */
+@media (max-width: 767px) {
+    .slide {
+        padding: 1rem;
+    }
+}
+
 
         .slide.active {
             display: block;
