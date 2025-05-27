@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>長輩照護陪伴LINE Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .slide-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+            /* 4:3 比例 */
+            aspect-ratio: 4/3;
+            max-width: 1024px;
+            margin: 0 auto;
+        }
+
+        .slide {
+            display: none;
+            padding: 2rem;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .nav-button {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .slide-nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #cbd5e0;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .slide-nav-dot.active {
+            background-color: #10b981;
+            transform: scale(1.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 2px;
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 1rem;
+            }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table td, table th {
+            padding: 0.75rem;
+            vertical-align: top;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        table th {
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .chat-bubble {
+            position: relative;
+            background: #E5F7EF;
+            border-radius: 12px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            max-width: 80%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .chat-bubble.user {
+            background: #d1fae5;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        
+        .chat-bubble.agent {
+            background: #f0fdf4;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        
+        .chat-container {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl md:text-3xl font-bold">長輩照護陪伴LINE Agent</h1>
+            </div>
+            <p class="mt-2 text-lg opacity-90">為長輩打造的智慧助理，整合健康照護、生活服務、智慧家居與社交連結</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="slide-container mb-8">
+            <!-- Navigation Buttons -->
+            <div class="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
+                <button id="prevBtn" class="nav-button" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+            <div class="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
+                <button id="nextBtn" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Slides -->
+           <!-- Slide 1: Cover - 重新排版 -->
+<div class="slide active" id="slide1">
+    <div class="flex flex-col md:flex-row items-center justify-center h-full">
+        <div class="w-full md:w-1/2 mb-6 md:mb-0">
+            <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=4Zj6DIN376%40%E5%9C%96%E7%89%871.png" alt="長輩照護" class="w-full h-auto rounded-lg shadow-lg">
+        </div>
+        
+        <div class="w-full md:w-1/2 md:pl-8 flex flex-col items-center md:items-start">
+            <div class="text-center md:text-left mb-8">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4 text-gray-800">長輩照護陪伴<br>LINE Agent</h2>
+                <h3 class="text-2xl md:text-3xl font-medium mb-6 text-gray-600">產品介紹</h3>
+            </div>
+            
+            <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=9lRroKTdRr%40LINE%E5%B9%AB%E5%8A%A9.svg" alt="LINE幫助" class="w-32 h-32 md:w-36 md:h-36 floating">
+        </div>
+    </div>
+</div>
+
+            <!-- Slide 2: 長輩面臨的挑戰 -->
+            <div class="slide" id="slide2">
+                <h2 class="section-title text-3xl md:text-4xl text-center w-full">長輩面臨的挑戰</h2>
+                
+                <div class="mb-6">
+                    <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=180IMz2hF3%40%E5%9C%96%E7%89%872.png" alt="長輩面臨的挑戰" class="mx-auto w-full max-w-2xl h-auto rounded-lg shadow-lg mb-6">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">社交孤立</h3>
+                        <p class="text-gray-600">子女忙碌，長輩獨居或與配偶同住，社交圈逐漸縮小，容易感到孤獨</p>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">詐騙風險</h3>
+                        <p class="text-gray-600">長輩對新型詐騙手法缺乏認知，容易成為詐騙目標</p>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">健康管理</h3>
+                        <p class="text-gray-600">慢性疾病管理、用藥提醒、定期檢查等健康事項需要更好的追蹤系統</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3: LINE為核心的統一服務平台 -->
+            <div class="slide" id="slide3">
+                <h2 class="section-title text-3xl md:text-4xl">LINE為核心的統一服務平台</h2>
+                
+                <div class="flex flex-col md:flex-row items-center">
+                    <div class="w-full md:w-1/2 mb-6 md:mb-0">
+                        <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=5sw1OHIQNp%40%E6%89%8B%E6%A9%9F%E9%80%A3%E7%B5%90%E8%A3%9D%E7%BD%AE.jpg" alt="手機連結裝置" class="w-full h-auto rounded-lg shadow-lg">
+                    </div>
+                    
+                    <div class="w-full md:w-1/2 md:pl-8">
+                        <h3 class="text-2xl font-bold mb-4 text-green-600">為什麼選擇LINE作為平台？</h3>
+                        
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-lg">高普及率</h4>
+                                    <p class="text-gray-600">台灣LINE滲透率超過90%，長輩已熟悉使用</p>
+                                </div>
+                            </li>
+                            
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-lg">簡單易用</h4>
+                                    <p class="text-gray-600">聊天介面直覺，無需學習新應用</p>
+                                </div>
+                            </li>
+                            
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-lg">整合能力</h4>
+                                    <p class="text-gray-600">可連結各種服務與裝置，成為智慧生活中樞</p>
+                                </div>
+                            </li>
+                            
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-3 mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-lg">家人連結</h4>
+                                    <p class="text-gray-600">家庭群組已是溝通常態，便於照護協作</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: 主要功能與服務 -->
+            <div class="slide" id="slide4">
+                <h2 class="section-title text-3xl md:text-4xl text-center w-full">主要功能與服務</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">健康照護</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                用藥提醒與記錄
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                提醒預約看診
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                健康數據收集與分析
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                緊急求助通知
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">生活服務</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                代訂外送餐飲與日用品
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                交通接送預約
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                家事服務安排
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                日常提醒功能
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">社交連結</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                製作早安圖
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                社區活動推薦
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                數位珍藏回憶
+                            </li>
+                      </ul>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">數位遺囑</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                協助立遺囑相關事宜
+                            </li>
+                          </ul>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">詐騙警示</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                詐騙訊息辨識
+                            </li>
+                         </ul>
+                    </div>
+                    
+                    <div class="card p-5">
+                        <div class="feature-icon mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-center text-green-700">智慧家居控制</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                語音控制智慧檯燈
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                啟動掃地機器人清掃
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                監控家中環境
+                            </li>
+                            <li class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                家電設備統一管理
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: 功能詳細說明 -->
+           <div class="slide" id="slide5">
+    <h2 class="section-title text-3xl md:text-4xl">功能詳細說明</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">健康照護整合</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">整合健康相關服務，讓長輩輕鬆管理自身健康。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>藥物提醒：</strong> 定時提醒服藥，記錄用藥情況</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>看診預約：</strong> 協助預約醫療服務，提前通知</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>健康數據：</strong> 整合血壓、血糖等數據，提供趨勢分析</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>緊急求助：</strong> 一鍵通知家人或緊急聯絡人</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">生活服務代理</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">代替長輩處理日常生活中的各種需求。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>餐飲外送：</strong> 協助點餐、追蹤配送狀態</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>日用品採購：</strong> 協助購買生活必需品</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>交通接送：</strong> 預約計程車</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>家事服務：</strong> 安排清潔、修繕等服務</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">智慧家居控制</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">透過簡單的語音指令控制家中智慧設備。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>燈光控制：</strong> 調整亮度、開關燈光</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>家電管理：</strong> 控制電視、冷氣等設備</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>環境監控：</strong> 查看家中溫度、濕度等數據</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>智慧清潔：</strong> 控制掃地機器人等清潔設備</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">社交連結強化</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">幫助長輩維持社交活動，增強與親友的連結。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>早安圖製作：</strong> 一鍵生成精美早安圖片</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>活動推薦：</strong> 根據興趣推薦社區活動</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>數位回憶：</strong> 整理照片、影片，建立數位相簿</span>
+                </li>
+             </ul>
+        </div>
+        
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">詐騙警示</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">協助長輩辨識可能的詐騙風險，保障財產安全。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>訊息分析：</strong> 辨識可疑訊息內容</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>風險提醒：</strong> 提醒長輩注意詐騙風險</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>安全指引：</strong> 提供應對詐騙的建議</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card p-5">
+            <div class="flex items-center mb-3">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700">數位遺囑</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">協助長輩規劃並記錄個人意願，確保尊嚴與自主。</p>
+            <ul class="space-y-2 text-gray-700 text-sm pl-4">
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>意願記錄：</strong> 記錄醫療、喪葬等相關意願</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>資訊保存：</strong> 安全保存重要資訊</span>
+                </li>
+                <li class="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>法律諮詢：</strong> 連結專業法律資源</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+           <!-- Slide 6: 使用情境展示 -->
+<div class="slide" id="slide6">
+    <h2 class="section-title text-3xl md:text-4xl text-center w-full mb-8">使用情境展示</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+        <!-- 情境一：健康管理 -->
+        <div class="card p-6 flex flex-col h-full">
+            <div class="text-center mb-4">
+                <div class="feature-icon mx-auto mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700 mb-3">🩺 健康管理</h3>
+            </div>
+            
+            <div class="flex-grow">
+                <p class="text-gray-700 text-sm mb-4 leading-relaxed">
+                    阿嬤想測量血壓，但不會操作血壓計 App。<br>
+                    她只需對 LINE 說：「幫我量血壓」<br>
+                    → Agent 會指導她使用血壓計，自動記錄數據，並提供簡單解讀。
+                </p>
+                
+                <div class="chat-container">
+                    <div class="chat-bubble user">
+                        <p class="font-medium text-sm">阿嬤：幫我量血壓</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：好的，阿嬤！請您先準備好血壓計，我來一步步指導您：</p>
+                        <p class="text-xs mt-1">1. 請先坐下休息5分鐘</p>
+                        <p class="text-xs">2. 將袖帶綁在上臂，與心臟同高</p>
+                        <p class="text-xs">3. 按下血壓計上的開始按鈕</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：測量完成！您的血壓是120/80，非常正常！我已經記錄下來了。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 情境二：智慧家居 -->
+        <div class="card p-6 flex flex-col h-full">
+            <div class="text-center mb-4">
+                <div class="feature-icon mx-auto mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700 mb-3">🏠 智慧家居</h3>
+            </div>
+            
+            <div class="flex-grow">
+                <p class="text-gray-700 text-sm mb-4 leading-relaxed">
+                    阿公想控制家中智慧設備，但不記得各種 App。<br>
+                    只需對 LINE 說：「客廳有點暗」<br>
+                    → Agent 會自動調亮燈光。<br>
+                    說：「幫我掃地」→ 掃地機器人啟動。
+                </p>
+                
+                <div class="chat-container">
+                    <div class="chat-bubble user">
+                        <p class="font-medium text-sm">阿公：客廳有點暗</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：已為您調亮客廳燈光亮度至70%。還需要其他調整嗎？</p>
+                    </div>
+                    <div class="chat-bubble user">
+                        <p class="font-medium text-sm">阿公：幫我掃地</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：好的，已啟動掃地機器人，預計30分鐘完成清掃。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 情境三：生活協助 -->
+        <div class="card p-6 flex flex-col h-full">
+            <div class="text-center mb-4">
+                <div class="feature-icon mx-auto mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-green-700 mb-3">🍜 生活協助</h3>
+            </div>
+            
+            <div class="flex-grow">
+                <p class="text-gray-700 text-sm mb-4 leading-relaxed">
+                    奶奶需要廚房用品，但不會使用線上購物。<br>
+                    她只需對 Agent 說：「我的鹽巴沒了」<br>
+                    → Agent 協助確認商品、下單並安排送達。
+                </p>
+                
+                <div class="chat-container">
+                    <div class="chat-bubble user">
+                        <p class="font-medium text-sm">奶奶：我的鹽巴沒了</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：了解，我可以幫您訂購鹽巴。您上次購買的是「海鹽300g」，要再買一樣的嗎？</p>
+                    </div>
+                    <div class="chat-bubble user">
+                        <p class="font-medium text-sm">奶奶：好</p>
+                    </div>
+                    <div class="chat-bubble agent">
+                        <p class="font-medium text-sm">LINE Agent：已為您下單，價格是$35元，將使用您設定的付款方式。預計明天下午3點前送達。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- Slide 7: MVP 階段重點功能與使用方式-1 -->
+            <div class="slide" id="slide7">
+                <h2 class="section-title text-3xl md:text-4xl">MVP 階段重點功能與使用方式-1</h2>
+                
+                <div class="flex flex-col md:flex-row items-center">
+                    <div class="w-full md:w-1/2 mb-6 md:mb-0 pr-0 md:pr-6">
+                        <div class="card p-6">
+                            <h3 class="text-2xl font-bold mb-4 text-green-700">詐騙判斷</h3>
+                            
+                            <table class="mb-4">
+                                <tr>
+                                    <th class="w-1/4">模組</th>
+                                    <th class="w-1/2">MVP內容</th>
+                                    <th class="w-1/4">核心價值</th>
+                                </tr>
+                                <tr>
+                                    <td class="align-top font-medium">詐騙判斷</td>
+                                    <td class="align-top">
+                                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                            <li>長輩收到可疑訊息，轉傳給 LINE Agent</li>
+                                            <li>AI 協助判斷詐騙風險</li>
+                                            <li>提醒長輩注意，或通知家人</li>
+                                        </ul>
+                                    </td>
+                                    <td class="align-top text-gray-700">提供即時安全感，建立信任</td>
+                                </tr>
+                            </table>
+                            
+                            <div class="chat-container mt-4">
+                                <div class="chat-bubble user">
+                                    <p class="font-medium">阿嬤：這個訊息是真的嗎？「您的銀行帳戶異常，請點擊連結確認」</p>
+                                </div>
+                                <div class="chat-bubble agent">
+                                    <p class="font-medium text-red-600">LINE Agent：⚠️ 詐騙警告！</p>
+                                    <p>這是常見的詐騙手法，銀行不會透過簡訊要求您點擊連結。請不要點擊任何連結或提供個人資訊。</p>
+                                    <p class="mt-2">我已通知您的家人小明關注此事。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-1/2">
+                        <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=BF9rO8WB0M%40%E8%A9%90%E9%A8%99%E8%AD%A6%E7%A4%BA%E6%B5%81%E7%A8%8B.jpg" alt="詐騙警示流程" class="w-full h-auto rounded-lg shadow-lg">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8: MVP 階段重點功能與使用方式-2 -->
+            <div class="slide" id="slide8">
+                <h2 class="section-title text-3xl md:text-4xl">MVP 階段重點功能與使用方式-2</h2>
+                
+                <div class="flex flex-col md:flex-row items-center">
+                    <div class="w-full md:w-1/2 mb-6 md:mb-0 pr-0 md:pr-6">
+                        <div class="card p-6">
+                            <h3 class="text-2xl font-bold mb-4 text-green-700">畫早安圖</h3>
+                            
+                            <table class="mb-4">
+                                <tr>
+                                    <th class="w-1/4">模組</th>
+                                    <th class="w-1/2">MVP內容</th>
+                                    <th class="w-1/4">核心價值</th>
+                                </tr>
+                                <tr>
+                                    <td class="align-top font-medium">畫早安圖</td>
+                                    <td class="align-top">
+                                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                            <li>上傳照片即可轉換照片風格</li>
+                                            <li>內建五種風格可選</li>
+                                            <li>可任意加上文字</li>
+                                        </ul>
+                                    </td>
+                                    <td class="align-top text-gray-700">提升互動樂趣，鼓勵日常使用與情感傳遞</td>
+                                </tr>
+                            </table>
+                            
+                            <div class="chat-container mt-4">
+                                <div class="chat-bubble user">
+                                    <p class="font-medium">奶奶：我想做一張早安圖</p>
+                                </div>
+                                <div class="chat-bubble agent">
+                                    <p class="font-medium">LINE Agent：好的！請選擇您想使用的風格</p>
+                                </div>
+                                <div class="chat-bubble user">
+                                    <p class="font-medium">[選擇日系動畫風格]</p>
+                                </div>
+                                <div class="chat-bubble agent">
+                                    <p class="font-medium">LINE Agent：OK！您有要加上文字嗎？</p>
+                                  </div>
+                                <div class="chat-bubble user">
+                                    <p class="font-medium">奶奶：幫我加上 早安</p>
+                                </div>
+                                <div class="chat-bubble agent">
+                                    <p class="font-medium">LINE Agent：請上傳您的照片</p>
+                                </div>
+                                <div class="chat-bubble agent">
+                                    <p class="font-medium">LINE Agent：圖片已完成！</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-1/2">
+                        <img src="https://ap11.ragic.com/sims/file.jsp?a=joycehuang&f=P9D80a92H0%40%E6%97%A9%E5%AE%89%E5%9C%96%E6%B5%81%E7%A8%8B.jpg" alt="早安圖流程" class="w-full h-auto rounded-lg shadow-lg">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Navigation Dots -->
+        <div class="slide-nav mt-4">
+            <div class="slide-nav-dot active" data-slide="1"></div>
+            <div class="slide-nav-dot" data-slide="2"></div>
+            <div class="slide-nav-dot" data-slide="3"></div>
+            <div class="slide-nav-dot" data-slide="4"></div>
+            <div class="slide-nav-dot" data-slide="5"></div>
+            <div class="slide-nav-dot" data-slide="6"></div>
+            <div class="slide-nav-dot" data-slide="7"></div>
+            <div class="slide-nav-dot" data-slide="8"></div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.slide-nav-dot');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            let currentSlide = 0;
+            
+            // Function to show a specific slide
+            function showSlide(index) {
+                // Hide all slides
+                slides.forEach(slide => {
+                    slide.classList.remove('active');
+                });
+                
+                // Remove active class from all dots
+                dots.forEach(dot => {
+                    dot.classList.remove('active');
+                });
+                
+                // Show the selected slide and activate corresponding dot
+                slides[index].classList.add('active');
+                dots[index].classList.add('active');
+                
+                // Update button states
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === slides.length - 1;
+                
+                // Update current slide index
+                currentSlide = index;
+            }
+            
+            // Event listeners for navigation buttons
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+            
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < slides.length - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+            
+            // Event listeners for navigation dots
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    showSlide(index);
+                });
+            });
+            
+            // Initialize with the first slide
+            showSlide(0);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'946360c421584a2a',t:'MTc0ODMyNjUyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
