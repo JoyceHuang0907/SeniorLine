@@ -1009,7 +1009,7 @@
             </div>
         </div>
 
-        <!-- Slide Navigation Dots -->
+       <!-- Slide Navigation Dots -->
         <div class="slide-nav mt-4">
             <div class="slide-nav-dot active" data-slide="1"></div>
             <div class="slide-nav-dot" data-slide="2"></div>
@@ -1020,6 +1020,34 @@
             <div class="slide-nav-dot" data-slide="7"></div>
             <div class="slide-nav-dot" data-slide="8"></div>
         </div>
+
+        <!-- 新增：底部導航按鈕 -->
+        <div class="flex justify-between items-center mt-6 max-w-1024px mx-auto px-4">
+            <!-- 上一頁按鈕 -->
+            <button id="prevBtnBottom" class="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="font-medium">上一頁</span>
+            </button>
+            
+            <!-- 頁碼顯示 -->
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-600 font-medium">
+                    <span id="currentPageNumber">1</span> / <span id="totalPages">8</span>
+                </span>
+            </div>
+            
+            <!-- 下一頁按鈕 -->
+            <button id="nextBtnBottom" class="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400">
+                <span class="font-medium">下一頁</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+
+    </main>
     </main>
 
     <script>
@@ -1028,7 +1056,14 @@
             const dots = document.querySelectorAll('.slide-nav-dot');
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
+            const prevBtnBottom = document.getElementById('prevBtnBottom');
+            const nextBtnBottom = document.getElementById('nextBtnBottom');
+            const currentPageNumber = document.getElementById('currentPageNumber');
+            const totalPages = document.getElementById('totalPages');
             let currentSlide = 0;
+            
+            // 設定總頁數
+            totalPages.textContent = slides.length;
             
             // Function to show a specific slide
             function showSlide(index) {
@@ -1046,15 +1081,23 @@
                 slides[index].classList.add('active');
                 dots[index].classList.add('active');
                 
-                // Update button states
-                prevBtn.disabled = index === 0;
-                nextBtn.disabled = index === slides.length - 1;
+                // Update button states (both top and bottom)
+                const isFirst = index === 0;
+                const isLast = index === slides.length - 1;
+                
+                prevBtn.disabled = isFirst;
+                nextBtn.disabled = isLast;
+                prevBtnBottom.disabled = isFirst;
+                nextBtnBottom.disabled = isLast;
+                
+                // Update page number
+                currentPageNumber.textContent = index + 1;
                 
                 // Update current slide index
                 currentSlide = index;
             }
             
-            // Event listeners for navigation buttons
+            // Event listeners for top navigation buttons
             prevBtn.addEventListener('click', () => {
                 if (currentSlide > 0) {
                     showSlide(currentSlide - 1);
@@ -1062,6 +1105,19 @@
             });
             
             nextBtn.addEventListener('click', () => {
+                if (currentSlide < slides.length - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+            
+            // Event listeners for bottom navigation buttons
+            prevBtnBottom.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+            
+            nextBtnBottom.addEventListener('click', () => {
                 if (currentSlide < slides.length - 1) {
                     showSlide(currentSlide + 1);
                 }
@@ -1078,5 +1134,5 @@
             showSlide(0);
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'946360c421584a2a',t:'MTc0ODMyNjUyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
